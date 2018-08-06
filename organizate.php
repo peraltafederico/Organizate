@@ -10,7 +10,7 @@ License: GPL2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: organiza-tus-clientes
 */
-
+$test= "git";
 add_action('init', 'start_session', 1);
 add_action('init', 'org_shortcode');
 add_action('wp_ajax_nopriv_org_guardar_datos', 'org_guardar_datos'); //manejar ajax
