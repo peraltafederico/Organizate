@@ -279,7 +279,7 @@ function org_clientela_shortcode($args, $content) {
 
 
   $uid = $wpdb->get_var(
-           $wpdb->prepare("SELECT id from $tabla_empleadores WHERE nombre = %s
+           $wpdb->prepare("SELECT id from $tabla_empleadores WHERE email = %s
            ",
            $email
            )
@@ -395,7 +395,7 @@ function org_guardar_datos () {
     $resultados['mensaje'] = "Inscripcion correcta";
     $resultados['estado'] = 1;
     org_inscribir_usuario($datos);
-    org_registro_tabla($datos['email']);
+    org_registro_tabla($datos['nombre'], $datos['email'], $datos['password']);
 
   endif;
   }
@@ -459,6 +459,8 @@ function org_crear_tablas() {
     $tabla[] = "CREATE TABLE  $tabla_empleadores (
       id int(11) NOT NULL AUTO_INCREMENT,
       nombre varchar(180),
+      email varchar(180),
+      password varchar(180),
       UNIQUE KEY id (id)
     ) $charset_collate;";
 
@@ -499,7 +501,7 @@ function org_tabla_al_inicio() {
 
 }
 
-function org_registro_tabla($email) {
+function org_registro_tabla($nombre, $email, $pass) {
 
   global $wpdb;
 
@@ -512,9 +514,13 @@ function org_registro_tabla($email) {
     $wpdb->insert(
       $nombre_tabla,
       array(
-        'nombre' => $email,
+        'nombre' => $nombre,
+        'email' => $email,
+        'password' => $pass
       ),
       array(
+        '%s',
+        '%s',
         '%s',
       )
     );
@@ -614,7 +620,7 @@ function org_inscribir_clientes() {
   $tabla_empleadores = $wpdb->prefix . "org_empleadores";
 
   $uid = $wpdb->get_var(
-            $wpdb->prepare("SELECT id from $tabla_empleadores WHERE nombre = %s
+            $wpdb->prepare("SELECT id from $tabla_empleadores WHERE email = %s
             ",
             $datos['email']
             )
