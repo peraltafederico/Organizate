@@ -34,9 +34,11 @@ add_action('wp_logout', 'end_session');
 add_action('wp_login', 'end_session');
 add_action('end_session_action', 'end_session');
 
+add_action('admin_head-edit.php', 'org_register_custom_admin_titles');
+
 add_filter('manage_edit-org_usuarios_columns', 'org_usuarios_headers');
 add_filter('manage_org_usuarios_posts_custom_column', 'org_usuarios_columnas',1,2);
-add_action('admin_head-edit.php', 'org_register_custom_admin_titles');
+add_filter( 'if_menu_conditions', 'org_condicion_if_menu' );
 
 register_activation_hook(__FILE__,'org_tabla_al_inicio');
 
@@ -47,6 +49,18 @@ session_start();}
 
 function end_session() {
 session_destroy ();
+}
+
+function org_condicion_if_menu( $condiciones ) {
+
+  $condiciones[] = array(
+    'name'    =>  'Usuario logueado', // name of the condition
+    'condition' =>  function($item) {          // callback - must return TRUE or FALSE
+      return si_usuario_logueado();
+    }
+  );
+
+  return $condiciones;
 }
 
 //adheriendo una una funcion para lugar acceder a add_filter
@@ -344,8 +358,21 @@ function org_clientela_shortcode($args, $content) {
 
 
 }
+
 function org_edicion_usuario_shortcode(){
-  echo "enzo puto";
+
+  $datos = array(
+    'error' => "Usuario y/o contraseña incorrectos."
+  );
+
+  if(org_chequeo_usuarios($_SESSION['email'], $_SESSION['pass'])){
+
+
+  }
+  else {
+    return $datos[error];
+  }
+
 }
 
 
@@ -905,4 +932,11 @@ function org_saber_url(){
   global $wp;
   return home_url($wp);
 }
+
+function si_usuario_logueado(){
+  if(is_page('Clientela') || is_page('Edicion usuario')){
+    return true;
+  };
+}
+
 ?>

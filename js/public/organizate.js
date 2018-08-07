@@ -7,7 +7,7 @@ jQuery(document).ready(function($){
   var wpajax_url = document.location.protocol + '//' +
   document.location.host + '/wordpress/wp-admin/admin-ajax.php';
 
-  var guardar_clientea = wpajax_url + '?action=org_guardar_datos';
+  var guardar_clientes = wpajax_url + '?action=org_guardar_datos';
   var inscripcion_clientela = wpajax_url + '?action=org_inscribir_clientes';
   var opciones_clientela = wpajax_url + '?action=org_sel_opciones_clientela';
   var edicion_clientes = wpajax_url + '?action=org_update_clientes';
@@ -23,7 +23,7 @@ jQuery(document).ready(function($){
     // enviar la data del formulario con ajax
     $.ajax({
       'method' : 'post',
-      'url' : guardar_clientea,
+      'url' : guardar_clientes,
       'data' : form_data,
       'dataType': "json",
       'cache' : false,
@@ -201,12 +201,6 @@ jQuery(document).ready(function($){
         $("#check_all").prop('checked', false);
   }
 
-  });
-
-  $('#editar_usuario').on('click', function(e){
-
-    e.preventDefault();
-    $('#form_editar_usuario').submit();
   });
 
 });
