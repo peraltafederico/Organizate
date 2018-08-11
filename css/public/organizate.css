@@ -99,3 +99,8 @@ h3.slb-title {
 	padding : 0 !important;
 	border-radius: 5px;
 }
+
+.derecha{
+	float:right;
+	display: inline-block;
+}

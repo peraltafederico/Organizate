@@ -29,6 +29,10 @@ add_action('wp_ajax_org_log_out', 'org_log_out');
 add_action('wp_ajax_nopriv_org_log_out', 'org_log_out');
 add_action('wp_ajax_org_saber_url', 'org_saber_url');
 add_action('wp_ajax_nopriv_saber_url', 'org_saber_url');
+add_action('wp_ajax_org_update_empleadores', 'org_update_empleadores');
+add_action('wp_ajax_nopriv_org_update_empleadores', 'org_update_empleadores');
+add_action('wp_ajax_org_eliminar_empleador', 'org_eliminar_empleador');
+add_action('wp_ajax_nopriv_org_eliminar_empleador', 'org_eliminar_empleador');
 
 add_action('wp_logout', 'end_session');
 add_action('wp_login', 'end_session');
@@ -38,7 +42,7 @@ add_action('admin_head-edit.php', 'org_register_custom_admin_titles');
 
 add_filter('manage_edit-org_usuarios_columns', 'org_usuarios_headers');
 add_filter('manage_org_usuarios_posts_custom_column', 'org_usuarios_columnas',1,2);
-add_filter( 'if_menu_conditions', 'org_condicion_if_menu' );
+add_filter( 'if_menu_conditions', 'org_condicion_if_menu');
 
 register_activation_hook(__FILE__,'org_tabla_al_inicio');
 
@@ -77,6 +81,7 @@ function org_shortcode() {
   add_shortcode('org_clientela', 'org_clientela_shortcode');
   add_shortcode('org_edicion', 'org_edicion_shortcode');
   add_shortcode('org_edicion_usuario', 'org_edicion_usuario_shortcode');
+  add_shortcode('org_eliminar_empleador_sh', 'org_eliminar_empleador_shortcode');
 }
 
 function org_public_scripts() {
@@ -265,6 +270,11 @@ function org_clientela_shortcode($args, $content) {
 
   global $wpdb;
 
+  $email = "prueba@prueba.com";
+  $id_unico_wordpress = org_obtener_id($email, "org_email");
+  echo "<script>console.log('". $id_unico_wordpress ."')</script>";
+
+  $mi_url = org_saber_url();
   $tabla_empleadores = $wpdb->prefix . "org_empleadores";
   $tabla_clientes = $wpdb->prefix . "org_clientes";
 
@@ -274,8 +284,9 @@ function org_clientela_shortcode($args, $content) {
     $pass = $_POST['org_password_login'];
 
     if($_SESSION['email'] !== $email || $_SESSION['pass'] !== $pass){
-      $_SESSION['email'] = "";
-      $_SESSION['pass'] = "";
+      $_SESSION['email'] = null;
+      $_SESSION['pass'] = null;
+      $_SESSION['id_empleador'] = null;
     }
   }
 
@@ -290,14 +301,14 @@ function org_clientela_shortcode($args, $content) {
       $pass = $_SESSION['pass'];
   }
 
-
-
   $uid = $wpdb->get_var(
            $wpdb->prepare("SELECT id from $tabla_empleadores WHERE email = %s
            ",
            $email
            )
          );
+
+  $_SESSION['id_empleador'] = $uid;
 
   $nombres_clientes_db = $wpdb->get_results("SELECT * from $tabla_clientes WHERE uid = $uid");
 
@@ -351,28 +362,93 @@ function org_clientela_shortcode($args, $content) {
 }
   else{
 
-    $output = 'Usuario y/o contraseña incorrecto/s';
+    $output = '<p>Usuario y/o contraseña incorrecto/s</p>
+              <p><a href="'. $mi_url .'/inicia-sesion-en-organizate-2/">Intentar de nuevo</a></p>';
 }
 
   return $output;
-
-
 }
 
 function org_edicion_usuario_shortcode(){
 
-  $datos = array(
-    'error' => "Usuario y/o contraseña incorrectos."
-  );
+  $mi_url = org_saber_url();
 
-  if(org_chequeo_usuarios($_SESSION['email'], $_SESSION['pass'])){
+  if(isset($_SESSION['id_empleador'])){
 
+    global $wpdb;
 
+    $email = $_SESSION['email'];
+    $tabla_empleadores = $wpdb->prefix . "org_empleadores";
+    $datos_empleador = $wpdb->get_results("SELECT * from $tabla_empleadores WHERE email = '$email'");
+    $nombre = $datos_empleador[0]->nombre;
+    $pass = $datos_empleador[0]->password;
+
+    $output = '
+
+      <form id="update_empleadores" method="post"
+      action="/wordpress/wp-admin/admin-ajax.php?action=org_update_empleadores">
+
+        <p>
+          <strong>Nombre</strong>
+          <input type="text" name="nuevo_nombre" value="'. $nombre .'" />
+        </p>
+
+        <p>
+          <strong>Email</strong>
+          <input type="text" value="'. $email .'" readonly="readonly" />
+        </p>
+
+        <p>
+          <strong>Password</strong>
+          <input type="password" name="viejo_pass" placeholder="Contraseña actual" />
+          <input type="password" name="nuevo_pass" placeholder="Nueva contraseña" />
+        </p>
+
+        <p>
+          <input type="submit" value="Actualizar datos">
+          <button type="button" id="boton_eliminar" class="derecha">Eliminar usuario</button>
+          </form>
+        </p>
+
+    ';
   }
+
   else {
-    return $datos[error];
+
+    $output = '<p>Usuario y/o contraseña incorrecto/s</p>
+              <p><a href="'. $mi_url .'/inicia-sesion-en-organizate-2/">Intentar de nuevo</a></p>';
   }
 
+  return $output;
+}
+
+function org_eliminar_empleador_shortcode(){
+
+  if(isset($_SESSION['id_empleador'])){
+
+    $output = '<form id="form_eliminar_usuario" method="post"
+            action="/wordpress/wp-admin/admin-ajax.php?action=org_eliminar_empleador">
+
+              <p>
+                <strong>Ultimo paso para eliminar tu usuario (:</strong>
+              </p>
+              <p>
+                <input type="password" name="pass_actual" placeholder="Contraseña" />
+                <input type="password" name="pass_actual_conf" placeholder="Confirma tu contraseña" />
+              </p>
+
+              <button type="button" id="boton_confirmar_eliminacion">Confimar eliminacion</button>
+
+            </form>';
+  }
+
+  else {
+
+    $output = '<p>Usuario y/o contraseña incorrecto/s</p>
+              <p><a href="'. $mi_url .'/inicia-sesion-en-organizate-2/">Intentar de nuevo</a></p>';
+  }
+
+  return $output;
 }
 
 
@@ -731,6 +807,106 @@ function org_update_clientes(){
    return org_json($datos);
 }
 
+function org_update_empleadores(){
+
+  $datos = array();
+
+  global $wpdb;
+  $email = $_SESSION['email'];
+  $id_empleador_mysql = $_SESSION['id_empleador'];
+  $id_empleador_wordpress = org_obtener_id($email, "org_email");
+  $tabla_empleadores = $wpdb->prefix . "org_empleadores";
+  $datos_empleador = $wpdb->get_results("SELECT * from $tabla_empleadores WHERE email = '$email'");
+  $pass_actual = $datos_empleador[0]->password;
+  $viejo_pass = $_POST['viejo_pass'];
+  $nuevo_pass = $_POST['nuevo_pass'];
+  $nuevo_nombre = $_POST['nuevo_nombre'];
+
+  if($viejo_pass != $pass_actual) {
+    $datos[mensaje] = "Las contraseñas no coinciden";
+    $datos[estado] = false;
+  }
+
+  else {
+
+    $wpdb->query(
+      $wpdb->prepare(
+        "
+        UPDATE $tabla_empleadores
+        SET nombre = '$nuevo_nombre',
+            password = '$nuevo_pass'
+        WHERE id = %d
+        ",
+        $id_empleador_mysql
+        )
+      );
+
+    update_field(org_unico_codigo_acf('org_nombre'), $nuevo_nombre, $id_empleador_wordpress);
+    update_field(org_unico_codigo_acf('org_password'), $nuevo_pass, $id_empleador_wordpress);
+
+    $_SESSION['pass'] = $nuevo_pass;
+
+    $datos[mensaje] = "Datos actualizados.";
+    $datos[estado] = true;
+  }
+
+  return org_json($datos);
+}
+
+function org_eliminar_empleador(){
+
+  global $wpdb;
+
+  $datos = array(
+    'mensaje' => "",
+    'estado' => 0
+  );
+
+  $pass = $_POST['pass_actual'];
+  $pass_conf = $_POST['pass_actual_conf'];
+  $email = $_SESSION['email'];
+  $id_unico = $_SESSION['id_empleador'];
+  $comparar_email = "org_email";
+  $id_unico_wordpress = org_obtener_id($email, $comparar_email);
+  $tabla_postmeta = $wpdb->prefix . "postmeta";
+  $tabla_posts = $wpdb->prefix . "posts";
+  $tabla_empleadores = $wpdb->prefix . "org_empleadores";
+
+  if(org_testear_pass($pass, $pass_conf, $id_unico)){
+    $datos[estado] = 1;
+    $datos[mensaje] = "Se ha eliminado su usuario.";
+
+    $wpdb->query(
+           $wpdb->prepare(
+                 "
+                 DELETE $tabla_postmeta,$tabla_posts
+                 FROM $tabla_postmeta INNER JOIN $tabla_posts
+                 ON $tabla_posts.ID = $tabla_postmeta.post_id
+                 WHERE  $tabla_postmeta.post_id = %d
+                 ",
+                 $id_unico_wordpress
+                 )
+               );
+
+    $wpdb->query(
+           $wpdb->prepare(
+                 "
+                 DELETE FROM $tabla_empleadores WHERE id = %d
+                 ",
+                 $id_unico
+                 )
+               );
+
+    do_action('end_session_action');
+  }
+
+  else {
+    $datos[mensaje] = "Las contraseñas no coinciden.";
+  }
+
+  return org_json($datos);
+}
+
 //------------------------------//
 
 // HERRAMIENTAS
@@ -934,9 +1110,24 @@ function org_saber_url(){
 }
 
 function si_usuario_logueado(){
-  if(is_page('Clientela') || is_page('Edicion usuario')){
+  if(is_page('Clientela') || is_page('Edicion usuario') || isset($_SESSION['email'])){
+  #if(org_chequeo_usuarios($_SESSION['email'], $_SESSION['pass'])){
     return true;
-  };
+  }
+}
+
+function org_testear_pass($pass_conf, $pass_conf_2, $id){
+
+  global $wpdb;
+  $tabla_empleadores = $wpdb->prefix . "org_empleadores";
+  $datos_empleador = $wpdb->get_results("SELECT * from $tabla_empleadores WHERE id = $id");
+
+  $pass = $datos_empleador[0]->password;
+
+  if($pass === $pass_conf && $pass === $pass_conf_2)
+    return true;
+  else
+    return false;
 }
 
 ?>

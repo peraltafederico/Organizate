@@ -4,14 +4,14 @@ jQuery(document).ready(function($){
   var url_wordpress = document.location.protocol + '//' +
   document.location.host + '/wordpress/';
 
-  var wpajax_url = document.location.protocol + '//' +
-  document.location.host + '/wordpress/wp-admin/admin-ajax.php';
+  var wpajax_url = url_wordpress + 'wp-admin/admin-ajax.php';
 
   var guardar_clientes = wpajax_url + '?action=org_guardar_datos';
   var inscripcion_clientela = wpajax_url + '?action=org_inscribir_clientes';
   var opciones_clientela = wpajax_url + '?action=org_sel_opciones_clientela';
   var edicion_clientes = wpajax_url + '?action=org_update_clientes';
-
+  var update_empleadores = wpajax_url + '?action=org_update_empleadores';
+  var eliminar_empleador = wpajax_url + '?action=org_eliminar_empleador';
 
   $('form#org_form_id').bind('submit', function(){
 
@@ -169,6 +169,79 @@ jQuery(document).ready(function($){
 
   });
 
+  $('form#update_empleadores').bind('submit', function(){
+
+    //obtenemos el objeto form jquery
+    $form = $(this);
+    //configurar el formulario para nuestro post ajax
+    var form_data = $form.serialize();
+
+    // enviar la data del formulario con ajax
+    $.ajax({
+      'method' : 'post',
+      'url' : update_empleadores,
+      'data' : form_data,
+      'dataType': "json",
+      'cache' : false,
+      'success' : function ( data, textStatus ) {
+
+        if(data.estado == true) {
+
+          $form[0].reset();
+          alert(data.mensaje);
+          location.reload();
+        } else {
+          alert(data.mensaje);
+          $form[0].reset();
+        //  location.reload();
+        }
+
+    },
+
+    'error' : function ( jqXHR, textStatus, errorThrown) {
+
+    }
+
+  });
+      return false;
+
+  });
+
+  $('form#form_eliminar_usuario').bind('submit', function(){
+
+    $form = $(this);
+
+    var form_data = $form.serialize();
+
+    $.ajax({
+      'method' : 'post',
+      'url' : eliminar_empleador,
+      'data' : form_data,
+      'dataType' : "json",
+      'cache' : false,
+      'success' : function (data, textStatus) {
+
+        if(data.estado == 1) {
+            alert(data.mensaje);
+            window.location.replace(url_wordpress);
+        }
+
+        else {
+          alert(data.mensaje);
+          $form[0].reset();
+        }
+      },
+
+      'error' : function ( jqXHR, textStatus, errorThrown) {
+
+      }
+
+    });
+
+    return false;
+  });
+
+
  var clientes_total = $('#cant_clientes').val();
 
   $('#check_all').on('click', function(){
@@ -193,13 +266,25 @@ jQuery(document).ready(function($){
 
   });
 
-
   $('[name="clientes[]"]').on('click', function(){
 
     if( $('#check_all').is(':checked')) {
 
         $("#check_all").prop('checked', false);
   }
+
+  });
+
+  $('button#boton_eliminar').on('click', function(){
+
+    window.location.replace(url_wordpress + "/eliminar-usuario/");
+  });
+
+  $('button#boton_confirmar_eliminacion').on('click', function(){
+
+    if(confirm("Seguro que desea eliminar su usuario?")){
+      $('form#form_eliminar_usuario').submit();
+    };
 
   });
 
