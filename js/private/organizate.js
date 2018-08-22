@@ -1,11 +1,7 @@
-// wait until the page and jQuery have loaded before running the code below
 jQuery(document).ready(function($){
 
-	// setup our wp ajax URL
   var wpajax_url = document.location.protocol + '//' +
                    document.location.host + '/wordpress/wp-admin/admin-ajax.php';
-
-	// stop our admin menus from collapsing
 
 	if( $('body[class*="org_"]').length || $('body[class*="post-type-org_"]').length ) {
 
