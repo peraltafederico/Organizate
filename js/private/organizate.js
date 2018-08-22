@@ -1,8 +1,5 @@
 jQuery(document).ready(function($){
 
-  var wpajax_url = document.location.protocol + '//' +
-                   document.location.host + '/wordpress/wp-admin/admin-ajax.php';
-
 	if( $('body[class*="org_"]').length || $('body[class*="post-type-org_"]').length ) {
 
 		$slb_menu_li = $('#toplevel_page_org_dashboard_admin_page');
