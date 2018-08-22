@@ -34,15 +34,28 @@ add_action('wp_ajax_nopriv_org_update_empleadores', 'org_update_empleadores');
 add_action('wp_ajax_org_eliminar_empleador', 'org_eliminar_empleador');
 add_action('wp_ajax_nopriv_org_eliminar_empleador', 'org_eliminar_empleador');
 
+add_action('wp_enqueue_scripts' , 'org_public_scripts');
+add_action('admin_enqueue_scripts', 'org_admin_scripts');
+
 add_action('wp_logout', 'end_session');
 add_action('wp_login', 'end_session');
 add_action('end_session_action', 'end_session');
 
 add_action('admin_head-edit.php', 'org_register_custom_admin_titles');
 
+//registro de los menus creados
+add_action('admin_menu', 'org_admin_menus');
+
 add_filter('manage_edit-org_usuarios_columns', 'org_usuarios_headers');
 add_filter('manage_org_usuarios_posts_custom_column', 'org_usuarios_columnas',1,2);
 add_filter( 'if_menu_conditions', 'org_condicion_if_menu');
+
+add_filter('manage_edit-org_clientes_columns', 'org_clientes_headers');
+add_filter('manage_org_clientes_posts_custom_column', 'org_clientes_columnas',1,2);
+
+//Opciones de ACF
+add_filter('acf/settings/path', 'org_acf_settings_path');
+add_filter('acf/settings/dir', 'org_acf_settings_dir');
 
 register_activation_hook(__FILE__,'org_tabla_al_inicio');
 
@@ -65,6 +78,29 @@ function org_condicion_if_menu( $condiciones ) {
   );
 
   return $condiciones;
+}
+
+if( !class_exists('Acf')) {
+
+  DEFINE('ACF_LITE', true);
+
+  include_once(plugin_dir_path(__FILE__) . 'lib/advanced-custom-fields/acf.php');
+}
+
+include_once(plugin_dir_path(__FILE__) . 'cpt/org_tabla-comerciantes.php');
+include_once(plugin_dir_path(__FILE__) . 'cpt/org_tabla-clientes.php');
+include_once(plugin_dir_path(__FILE__) . 'lib/if-menu/if-menu.php');
+
+function org_acf_settings_path($path){
+
+  $path = plugin_dir_path(__FILE__) . 'lib/advanced-custom-fields/';
+  return $path;
+}
+
+function org_acf_settings_dir($dir){
+
+  $dir = plugin_dir_path(__FILE__) . 'lib/advanced-custom-fields/';
+  return $dir;
 }
 
 //adheriendo una una funcion para lugar acceder a add_filter
@@ -93,7 +129,14 @@ function org_public_scripts() {
   wp_enqueue_style('organizate-css', plugin_dir_url( __FILE__ ) . '/css/public/organizate.css?v='.time() );
 }
 
-add_action('wp_enqueue_scripts' , 'org_public_scripts');
+function org_admin_scripts() {
+
+  wp_register_script('organizate-js-private',
+                  plugins_url('/js/private/organizate.js', __FILE__),
+                  array('jquery'), '', true);
+
+  wp_enqueue_script('organizate-js-private');
+}
 
 function org_usuarios_headers( $columns ) {
 
@@ -133,6 +176,44 @@ function org_usuarios_columnas( $column, $post_id) {
   echo $output;
 }
 
+function org_clientes_headers($columns) {
+
+    $columns = array(
+      'cb' => '<input type="checkbox" />',
+      'title' => __('Nombre del cliente'),
+      'partido' => __('Partido'),
+      'localidad' => __('Localidad'),
+      'direccion' => __('Direccion'),
+    );
+
+    return $columns;
+}
+
+function org_clientes_columnas($column, $post_id) {
+
+  $output = '';
+
+  switch($column) {
+
+    case 'partido':
+      $partido = get_field('org_partido_cliente', $post_id);
+      $output .= $partido;
+      break;
+
+    case 'localidad':
+      $localidad = get_field('org_localidad_cliente', $post_id);
+      $output .= $localidad;
+      break;
+
+    case 'direccion':
+      $direccion = get_field('org_direccion_cliente', $post_id);
+      $output .= $direccion;
+      break;
+  }
+
+  echo $output;
+}
+
 //configurando el nombre del usuario en el admin panel del plugin
 function org_custom_admin_titles( $title, $post_id) {
 
@@ -143,14 +224,53 @@ function org_custom_admin_titles( $title, $post_id) {
   if ( isset($post->post_type) ) :
 
     switch ($post->post_type) {
+
       case 'org_usuarios':
         $fname = get_field('org_nombre', $post_id);
+        $output = $fname;
+        break;
+
+      case 'org_clientes':
+        $fname = get_field('org_nombre_cliente', $post_id);
         $output = $fname;
         break;
     }
   endif;
 
   return $output;
+}
+
+
+// ADMIN PAGES
+
+function org_dashboard_admin_page(){
+
+  $output = '
+    <div class="wrap">
+
+      <h2>Organizate!</h3>
+
+      <p>Blablabla</p>
+
+    </div>
+  ';
+
+  echo $output;
+}
+
+//esta funcion incluye el menu principal y los submenus en el dashboard
+function org_admin_menus(){
+
+  //menu principal
+  $top_menu = 'org_dashboard_admin_page';
+
+  add_menu_page('', 'Organizate!', 'manage_options', $top_menu, $top_menu, 'dashicons-list-view');
+
+  //submenus
+
+  add_submenu_page($top_menu, '', 'Comerciantes', 'manage_options', 'edit.php?post_type=org_usuarios');
+
+  add_submenu_page($top_menu, '', 'Clientes', 'manage_options', 'edit.php?post_type=org_clientes');
 }
 
 //------------------------------//
