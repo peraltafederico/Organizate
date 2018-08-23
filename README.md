@@ -1,4 +1,4 @@
-#Organizate!
+.#Organizate!
 
       <h3>Instrucciones:</h3>
 
