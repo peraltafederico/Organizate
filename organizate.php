@@ -274,10 +274,37 @@ function org_dashboard_admin_page(){
   $output = '
     <div class="wrap">
 
-      <h2>Organizate!</h3>
+      <h1>Organizate!</h1>
 
-      <p>Blablabla</p>
+      <h3>Instrucciones:</h3>
 
+      <p>Primera parte:</p>
+          <li>Crea la pagina "Clientela" y escribi en ella "[org_clientela]"</li>
+          <li>Crea la pagina "Date de alta en ‘Organizate!" y escribi en ella "[org_formulario]"</li>
+          <li>Crea la pagina "Edición de clientes" y escribi en ella "[org_edicion]"</li>
+          <li>Crea la pagina "Edicion usuario" y escribi en ella "[org_edicion_usuario]"</li>
+          <li>Crea la pagina "Eliminar usuario" y escribi en ella "[org_eliminar_empleador_sh]"</li>
+          <li>Crea la pagina "Inicia sesión en Organizate!" y escribi en ella "[org_logueo_form]"</li>
+
+      <h3>Segunda parte:</h3>
+        <li>Agrega las siguientes paginas como menús (Aparecia->Menús):<br>
+            "Clientela"<br>
+            "Inicia sesión en Organizate!"<br>
+            "Edicion usuario"<br>
+            "Date de alta en Organizate!"</li>
+        <li>El plugin viene a su vez con otro plugin llamado "If menu" instalado<br>
+            Deberas seguir estos pequeños pasos:</li>
+          <ol>
+            <li>En cada uno de los menús agregados deberás<br>
+                habilitar la opcion "Enable visibility rules"<br>
+                y a su vez seleccionar opciones especificas<br>
+                para cada menú.
+            </li>
+            <li>En "Clientela" seleccionar "Show if Usuario logueado"</li>
+            <li>En "Iniciar sesion en Organizate!" seleccionar "Hide if Usuario logueado"</li>
+            <li>En "Edicion de usuario" seleccionar "Show if Usuario logueado"</li>
+            <li>En "Date de alta en Organizate!" seleccionar "hide if Usuario logueado"</li>
+          </ol>
     </div>
   ';
 
@@ -377,8 +404,10 @@ function org_edicion_shortcode(){
 
   $mi_url = org_saber_url();
 
+  if(isset($_SESSION['id_empleador'])){
+
   global $wpdb;
-  $id_clientes = $_POST['uid'];
+  $id_clientes = $_POST['id_ajax'];
   $separar_id = explode(',', $id_clientes);
   $tabla_clientes = $wpdb->prefix . "org_clientes";
   $output = '<form id="update_clientes" name="update_clientes_nombre" method="post"  action="/wordpress/wp-admin/admin-ajax.php?action=org_update_clientes">';
@@ -408,6 +437,12 @@ function org_edicion_shortcode(){
               <div>
                 <a href="'. $mi_url .'/clientela">Volver</a>
               </div>';
+  }
+  else{
+
+    $output = '<p>Usuario y/o contraseña incorrecto/s</p>
+              <p><a href="'. $mi_url .'/inicia-sesion-en-organizate-2/">Intentar de nuevo</a></p>';
+  }
 
   return $output;
 }
@@ -416,9 +451,9 @@ function org_clientela_shortcode($args, $content) {
 
   global $wpdb;
 
-  $email = "prueba@prueba.com";
+  /*$email = "prueba@prueba.com";
   $id_unico_wordpress = org_obtener_id($email, "org_email");
-  echo "<script>console.log('". $id_unico_wordpress ."')</script>";
+  echo "<script>console.log('". $id_unico_wordpress ."')</script>";*/
 
   $mi_url = org_saber_url();
   $tabla_empleadores = $wpdb->prefix . "org_empleadores";
@@ -447,19 +482,19 @@ function org_clientela_shortcode($args, $content) {
       $pass = $_SESSION['pass'];
   }
 
-  $uid = $wpdb->get_var(
+  $id_empleador = $wpdb->get_var(
            $wpdb->prepare("SELECT id from $tabla_empleadores WHERE email = %s
            ",
            $email
            )
          );
 
-  $_SESSION['id_empleador'] = $uid;
+  $_SESSION['id_empleador'] = $id_empleador;
 
-  $nombres_clientes_db = $wpdb->get_results("SELECT * from $tabla_clientes WHERE uid = $uid");
+  $nombres_clientes_db = $wpdb->get_results("SELECT * from $tabla_clientes WHERE propietario = '$email'");
 
 
-    $nombresdeclientes =  retornarnombres($uid, $nombres_clientes_db, $email, $pass);
+    $nombresdeclientes =  retornarnombres($nombres_clientes_db, $email, $pass);
     $output = '
 
     <div>'. $nombresdeclientes .'</div>
@@ -501,9 +536,6 @@ function org_clientela_shortcode($args, $content) {
 
       <div>
         <a href="/wordpress/wp-admin/admin-ajax.php?action=org_log_out">Log out</a>
-      </div>
-      <div>
-        <a href="/wordpress/wp-admin/admin-ajax.php?action=org_saber_url">Editar usuario</a>
       </div>';
 }
   else{
@@ -622,8 +654,7 @@ function org_guardar_datos () {
   );
 
   $errores = array();
-  $comparar_email = "org_email";
-  $chequear = org_obtener_id($datos['email'], $comparar_email);
+  $chequear = org_obtener_id($datos['email'], "org_email", "org_usuarios");
 
   if (!strlen($datos['nombre']))
     $errores['nombre'] = "El nombre es requerido";
@@ -664,8 +695,7 @@ function org_inscribir_usuario($datos) {
 
   try {
 
-    $comparar_email = "org_email";
-    $id_usuario = org_obtener_id($datos['email'], $comparar_email);
+    $id_usuario = org_obtener_id($datos['email'], "org_email", "org_usuarios");
 
     if(!$id_usuario):
       $id_usuario = wp_insert_post(
@@ -719,7 +749,7 @@ function org_crear_tablas() {
       partido varchar(80),
       localidad varchar(80),
       direccion varchar(80),
-      uid int(11),
+      propietario varchar(80),
       UNIQUE KEY id (id)
     ) $charset_collate;";
 
@@ -795,17 +825,19 @@ function org_sel_opciones_clientela() {
   $accion_eliminar = $_POST['acciontablaclientes'] == "eliminar";
   $accion_editar = $_POST['acciontablaclientes'] == "editar";
   $tabla_clientes = $wpdb->prefix . "org_clientes";
-  $uid = $_POST['uid'];
 
-  $id_array = $_POST['clientes'];
+  #$id_cliente_wordpress = org_obtener_id($email, 'org_propietario_cliente', 'org_clientes');
+
+  $id_array = $_POST['id_clientes'];
 
   if( $accion_eliminar && isset($id_array) ) {
 
     foreach ($id_array as $id_unico) {
-      org_eliminar_clientes($id_unico);
+      org_eliminar_clientes($id_unico, $email);
     }
 
     $data[mensaje] = "Usuario/s eliminado/s";
+    #$data[mensaje2] = $id_cliente_wordpress;
     $data[estado] = 1;
   }
 
@@ -819,23 +851,41 @@ function org_sel_opciones_clientela() {
   return $data;
 }
 
-function org_eliminar_clientes($id_unico) {
+function org_eliminar_clientes($id_unico, $email) {
 
   global $wpdb;
   $resultado = false;
 
   try {
 
-    $tabla_clientes = $wpdb->prefix . "org_clientes";
+    $id_cliente_wordpress = org_obtener_id($email, 'org_propietario_cliente', 'org_clientes');
+
+    if($id_cliente_wordpress == true){
+
+      $tabla_clientes = $wpdb->prefix . "org_clientes";
+      $tabla_postmeta = $wpdb->prefix . "postmeta";
+      $tabla_posts = $wpdb->prefix . "posts";
 
       $wpdb->query(
-      $wpdb->prepare("DELETE FROM $tabla_clientes WHERE id = %d
-      ",
-      $id_unico
-      )
-    );
+             $wpdb->prepare(
+                   "
+                   DELETE $tabla_postmeta,$tabla_posts
+                   FROM $tabla_postmeta INNER JOIN $tabla_posts
+                   ON $tabla_posts.ID = $tabla_postmeta.post_id
+                   WHERE  $tabla_postmeta.post_id = %d
+                   ",
+                   $id_cliente_wordpress
+                   )
+                 );
 
-    $resultados = true;
+        $wpdb->query(
+              $wpdb->prepare("DELETE FROM $tabla_clientes WHERE id = %d
+              ",
+              $id_unico
+          )
+      );
+    }
+
   }
 
   catch( Exception $e ) {
@@ -882,14 +932,14 @@ function org_inscribir_clientes() {
       'partido' => $datos['partido'],
       'localidad' => $datos['localidad'],
       'direccion' => $datos['direccion'],
-      'uid' => $uid,
+      'propietario' => $datos['email'],
     ),
     array(
       '%s',
       '%s',
       '%s',
       '%s',
-      '%d',
+      '%s',
     )
   );
 
@@ -976,7 +1026,7 @@ function org_update_empleadores(){
   global $wpdb;
   $email = $_SESSION['email'];
   $id_empleador_mysql = $_SESSION['id_empleador'];
-  $id_empleador_wordpress = org_obtener_id($email, "org_email");
+  $id_empleador_wordpress = org_obtener_id($email, "org_email", "org_usuarios");
   $tabla_empleadores = $wpdb->prefix . "org_empleadores";
   $datos_empleador = $wpdb->get_results("SELECT * from $tabla_empleadores WHERE email = '$email'");
   $pass_actual = $datos_empleador[0]->password;
@@ -1028,8 +1078,7 @@ function org_eliminar_empleador(){
   $pass_conf = $_POST['pass_actual_conf'];
   $email = $_SESSION['email'];
   $id_unico = $_SESSION['id_empleador'];
-  $comparar_email = "org_email";
-  $id_unico_wordpress = org_obtener_id($email, $comparar_email);
+  $id_unico_wordpress = org_obtener_id($email, "org_email", "org_usuarios");
   $tabla_postmeta = $wpdb->prefix . "postmeta";
   $tabla_posts = $wpdb->prefix . "posts";
   $tabla_empleadores = $wpdb->prefix . "org_empleadores";
@@ -1074,7 +1123,7 @@ function org_eliminar_empleador(){
 // HERRAMIENTAS
 
 //verificamos que otro usuario no tenga el mismo mail antes de inscribir
-function org_obtener_id($a_comparar, $customfield){
+function org_obtener_id($a_comparar, $customfield, $post_type){
 
   $id_usuario = 0;
 
@@ -1082,7 +1131,7 @@ function org_obtener_id($a_comparar, $customfield){
 
     $consulta_wp = new WP_Query(
       array(
-        'post_type' => 'org_usuarios',
+        'post_type' => $post_type,
         'post_per-page' => 1,
         'meta_key' => $customfield,
         'meta_query' => array(
@@ -1115,8 +1164,7 @@ function org_chequeo_usuarios($email,$pass) {
   $return = 0;
 
   try {
-    $comparar_email = "org_email";
-    $id_email = org_obtener_id($email, $comparar_email);
+    $id_email = org_obtener_id($email, "org_email", "org_usuarios");
     $pass_id_email = get_field("org_password", $id_email);
     if ($pass_id_email === $pass):
       $return = 1;
@@ -1185,7 +1233,7 @@ function org_json($php_array) {
 }
 
 
-function retornarnombres($uid, $nombres_clientes_db, $email, $pass) {
+function retornarnombres($nombres_clientes_db, $email, $pass) {
 
   $mi_url = org_saber_url();
 
@@ -1215,7 +1263,7 @@ function retornarnombres($uid, $nombres_clientes_db, $email, $pass) {
   $resultados = '
 
   <form id="org_editar_clientes" method="post" action="'. $mi_url .'/edicion-de-clientes">
-    <input type="hidden" id="id_unico" name="uid" value=""></input>
+    <input type="hidden" id="id_unico" name="id_ajax" value=""></input>
   </form>
 
   <div class="opciones_tab_clientes">
@@ -1231,7 +1279,6 @@ function retornarnombres($uid, $nombres_clientes_db, $email, $pass) {
   <input type="hidden" id="cant_clientes" value="'. $cant_clientes .'"></input>
   <input type="hidden" name="email" value="'. $email . '"></input>
   <input type="hidden" name="pass" value="'. $pass . '"></input>
-  <input type="hidden" name="uid" value ='. $uid .'"></input>
 
    <table class="clientela">
     <thead>
@@ -1255,7 +1302,7 @@ function retornarnombres($uid, $nombres_clientes_db, $email, $pass) {
 
       $resultados .= '
       <tr>
-      <td style="border:1px solid;"><input type="checkbox" name="clientes[]" value="' . $id_unico . '" id="'. $id_referencial .'"></input></td>
+      <td style="border:1px solid;"><input type="checkbox" name="id_clientes[]" value="' . $id_unico . '" id="' . $id_referencial . '"></input></td>
       <td style="border:1px solid;">'. $nombre_cliente . '</td>
       <td style="border:1px solid;">'. $partido_cliente . '</td>
       <td style="border:1px solid;">'. $localidad_cliente . '</td>

@@ -248,7 +248,7 @@ jQuery(document).ready(function($){
 
     if( $('#check_all').is(':checked')) {
 
-      for(x=0; x<=clientes_total ; x++){
+      for(x=1; x<=clientes_total ; x++){
 
         $("#"+x).prop('checked', true);
       }
@@ -266,7 +266,7 @@ jQuery(document).ready(function($){
 
   });
 
-  $('[name="clientes[]"]').on('click', function(){
+  $('[name="id_clientes[]"]').on('click', function(){
 
     if( $('#check_all').is(':checked')) {
 
