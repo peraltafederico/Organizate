@@ -53,6 +53,26 @@ add_filter( 'if_menu_conditions', 'org_condicion_if_menu');
 add_filter('manage_edit-org_clientes_columns', 'org_clientes_headers');
 add_filter('manage_org_clientes_posts_custom_column', 'org_clientes_columnas',1,2);
 
+add_filter('manage_edit-org_clientes_sortable_columns', 'org_ordenar_columna_clientes');
+add_action('pre_get_posts', 'manage_wp_posts_pre_get_posts', 1);
+
+function org_ordenar_columna_clientes($sortable_columns){
+
+  $sortable_columns['propietario'] = 'propietario';
+
+  return $sortable_columns;
+}
+
+function manage_wp_posts_pre_get_posts( $query ) {
+
+  if( 'org_clientes' == $query->get('post_type') ){
+      if( $query->get('orderby') == 'propietario' )
+          $query->set('orderby','title');
+  }
+
+   }
+
+
 //Opciones de ACF
 add_filter('acf/settings/path', 'org_acf_settings_path');
 add_filter('acf/settings/dir', 'org_acf_settings_dir');
@@ -184,6 +204,7 @@ function org_clientes_headers($columns) {
       'partido' => __('Partido'),
       'localidad' => __('Localidad'),
       'direccion' => __('Direccion'),
+      'propietario' => __('Propietario'),
     );
 
     return $columns;
@@ -208,6 +229,11 @@ function org_clientes_columnas($column, $post_id) {
     case 'direccion':
       $direccion = get_field('org_direccion_cliente', $post_id);
       $output .= $direccion;
+      break;
+
+    case 'propietario':
+      $propietario = get_field('org_propietario_cliente', $post_id);
+      $output .= $propietario;
       break;
   }
 
@@ -867,6 +893,22 @@ function org_inscribir_clientes() {
     )
   );
 
+  $id_cliente = wp_insert_post(
+    array(
+        'post_type' => 'org_clientes',
+        'post_title' => $datos['nombre'],
+        'post_status' => 'publish',
+    ),
+    true
+  );
+
+  update_field(org_unico_codigo_acf('org_nombre_cliente'), $datos['nombre'], $id_cliente);
+  update_field(org_unico_codigo_acf('org_partido_cliente'), $datos['partido'], $id_cliente);
+  update_field(org_unico_codigo_acf('org_localidad_cliente'), $datos['localidad'], $id_cliente);
+  update_field(org_unico_codigo_acf('org_direccion_cliente'), $datos['direccion'], $id_cliente);
+  update_field(org_unico_codigo_acf('org_propietario_cliente'), $datos['email'], $id_cliente);
+
+
 //$resultados = true;
 $datos[estado] = true;
 
@@ -1097,11 +1139,33 @@ function org_unico_codigo_acf($nombre_field){
     case 'org_nombre':
       $key = 'field_5974007866ef5';
       break;
+
     case 'org_email':
       $key = 'field_5974009b66ef6';
       break;
+
     case 'org_password':
       $key = 'field_59c9b37355c0a';
+      break;
+
+    case 'org_nombre_cliente':
+      $key = 'field_5b72466920314';
+      break;
+
+    case 'org_partido_cliente':
+      $key = 'field_5b7246ac20315';
+      break;
+
+    case 'org_localidad_cliente':
+      $key = 'field_5b7246c720316';
+      break;
+
+    case 'org_direccion_cliente':
+      $key = 'field_5b7246d720317';
+      break;
+
+    case 'org_propietario_cliente':
+      $key = 'field_5b7246d720319';
       break;
   }
 
